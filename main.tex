@@ -1,0 +1,569 @@
+\documentclass[twoside]{article}
+
+\usepackage[preprint]{aistats2027}
+\usepackage[round,authoryear]{natbib}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{mathtools}
+\usepackage{microtype}
+\usepackage{balance}
+\usepackage{url}
+
+\renewcommand{\bibname}{References}
+\renewcommand{\bibsection}{\subsubsection*{\bibname}}
+\bibliographystyle{apalike}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+\newtheorem{corollary}{Corollary}
+\newtheorem{proposition}{Proposition}
+\newtheorem{definition}{Definition}
+\newcommand{\E}{\mathbb E}
+\newcommand{\calone}{\operatorname{Cal}_1}
+\newcommand{\caltwo}{\operatorname{Cal}_2}
+\newcommand{\Reg}{\operatorname{Reg}}
+\newcommand{\simplex}{\Delta_K}
+\newcommand{\1}{\mathbf 1}
+
+\begin{document}
+\runningauthor{}
+
+\twocolumn[
+\aistatstitle{The Price of Fidelity: Minimax Multiclass Online Recalibration}
+
+\aistatsauthor{Pahan Dewasurendra}
+
+\aistatsaddress{Johns Hopkins University}
+]
+
+\begin{abstract}
+An online recalibrator observes a multiclass probability forecast, issues a new
+forecast, and then observes the outcome. It must become calibrated without
+losing much Brier score relative to the original forecasts. A recent binary
+result establishes exponent three, up to logarithms, for calibration error
+$\varepsilon$ and average excess loss $\varepsilon^2$. For $K$ classes,
+existing algorithms give
+the upper exponent $K+1$, but no matching lower bound was known. We prove a
+sharper Pareto lower bound. For every fixed $K$, if average excess Brier loss is
+at most $\beta$, then an oblivious truthful instance forces expected canonical
+calibration at least
+\[
+ c_K\min\{1,(T\beta^{(K-1)/2})^{-1/2}\}-C_K\sqrt{\beta}.
+\]
+Consequently, $(\varepsilon,\varepsilon^2)$ multiclass recalibration needs
+$\Omega_K(\varepsilon^{-(K+1)})$ rounds. Combined with recent upper bounds,
+this establishes the fixed-$K$ minimax horizon up to logarithmic factors. The
+proof introduces a dimension-matched martingale argument. A fractional
+Burkholder moment converts adaptive bin occupancies into fluctuation, while a
+$d$-dimensional lattice transport inequality shows that concentrating truthful
+hints into fewer forecast bins costs squared loss. The result holds for
+randomized learners and extends to losses that are strongly proper in
+Euclidean norm.
+\end{abstract}
+
+\section{Introduction}
+
+Calibration asks whether empirical outcome frequencies agree with issued
+probabilities on rounds sharing the same forecast. It can be enforced online
+against arbitrary outcome sequences, but a calibrated postprocessor can
+destroy the accuracy of a useful base forecaster. Online recalibration adds a
+fidelity requirement: after seeing a hint $q_t$, the learner predicts $p_t$ and
+seeks both calibration and small excess loss relative to $q_t$
+\citep{kuleshov2017estimating,okoroafor2024faster}.
+
+The sharp binary picture appeared only recently. \citet{hu2026optimal} prove
+that expected calibration $\varepsilon$ and average excess squared loss
+$\varepsilon^2$ are jointly attainable in $\widetilde O(\varepsilon^{-3})$
+rounds and require $\Omega(\varepsilon^{-3})$ rounds. Their theory is binary.
+Their multiclass experiment first projects top-class correctness to a binary
+event, and they explicitly note that the binary theorem does not apply to the
+lifted forecast.
+
+For $K\geq3$, the upper rate is nevertheless known. The multiclass construction
+of \citet{chen2026calibeating} tracks an arbitrary reference predictor while
+controlling cumulative Brier calibration. With a simplex discretization of
+scale $\varepsilon$, it yields the horizon
+$\widetilde O_K(\varepsilon^{-(K+1)})$. The exponent contains the full simplex
+dimension $d=K-1$. It was unclear whether this dependence was a limitation of
+the discretized upper bound or an unavoidable cost of preserving the hints.
+
+We show that it is unavoidable. Our main result gives a continuum of lower
+bounds indexed by the fidelity budget $\beta$. At the canonical choice
+$\beta=\varepsilon^2$, it proves the matching exponent $d+2=K+1$. The hard
+hints are not inaccurate or adversarially corrupted. They are the true
+conditional outcome probabilities. Properness then turns excess expected loss
+into squared movement away from the hints. A learner can merge nearby hints to
+reduce the number of calibration bins, but doing so spends this movement
+budget. The theorem quantifies the resulting geometric tradeoff.
+
+The main technical obstacle is adaptivity. A bin is selected using previous
+outcomes, so its occupancy and its label fluctuation are dependent. Standard
+independent-sum estimates do not apply after conditioning on the final bin. We
+combine two pathwise and martingale ingredients:
+\begin{itemize}
+\item A fractional Burkholder--Rosenthal argument at moment
+$2(1+2/d)$ lower bounds total fluctuation using the
+$(1+2/d)$-moment of adaptive occupancies.
+\item A lattice transport inequality upper bounds exactly that occupancy
+moment by the squared distance used to merge a $d$-dimensional grid of truthful
+hints.
+\end{itemize}
+The moment is chosen to match the geometry. The identities behind the final
+rate are exact, not an optimization artifact.
+
+Our result concerns canonical calibration of pure forecasts for fixed $K$ as
+$\varepsilon$ vanishes. This differs from recent high-dimensional calibration
+work, which studies calibration without reference fidelity and optimizes the
+dependence on $K$ for fixed accuracy
+\citep{peng2025highdim,fishelson2025highdim}. It also differs from
+U-calibration, projected smooth calibration, and RKHS multicalibration, which
+weaken or change the exact-bin canonical criterion
+\citep{gopalan2024computational,luo2024optimal,farina2026defensive}.
+
+\section{Setting}
+
+Let $K\geq2$, let $d=K-1$, and let
+$\simplex=\{p\in\mathbb R_+^K:\sum_i p_i=1\}$. On round $t$, an oblivious
+environment provides a hint $q_t\in\simplex$. The learner observes $q_t$ and
+outputs $p_t\in\simplex$, possibly using randomization and the past. It then
+observes $y_t\in\{e_1,\ldots,e_K\}$. We use Brier loss
+$\ell(p,y)=\|p-y\|_2^2$ \citep{brier1950verification} and normalized excess loss
+\[
+ \Reg_T(p,q,y)=\frac1T\sum_{t=1}^T
+ \bigl(\ell(p_t,y_t)-\ell(q_t,y_t)\bigr).
+\]
+
+For a realized prediction sequence, let $V(p)$ be its distinct values. Write
+$n_v=\sum_t\1\{p_t=v\}$ and
+$\rho_v=n_v^{-1}\sum_{t:p_t=v}y_t$ for occupied $v$. We study canonical mean
+and root-mean-square calibration
+\begin{align*}
+ \calone(p,y)&=\sum_{v\in V(p)}\frac{n_v}{T}\|v-\rho_v\|_2,\\
+ \caltwo(p,y)^2&=\sum_{v\in V(p)}\frac{n_v}{T}\|v-\rho_v\|_2^2.
+\end{align*}
+Weighted Cauchy--Schwarz gives $\calone\leq\caltwo$. Moreover,
+$T\caltwo^2$ is exactly the cumulative Brier calibration used by
+\citet{chen2026calibeating}.
+
+An algorithm is $(\alpha,\beta)$-recalibrated at horizon $T$ if, for every
+deterministic oblivious sequence $(q_t,y_t)_{t\leq T}$,
+\[
+ \E\caltwo(p,y)\leq\alpha,
+ \qquad
+ \E\Reg_T(p,q,y)\leq\beta,
+\]
+where the expectation is over learner randomization. Using $\calone$ gives a
+weaker requirement, so a lower bound for $\calone$ also applies to
+$\caltwo$.
+
+\section{Main Results}
+
+Our first theorem is a Pareto lower bound. Its stochastic instance is a proof
+device. Corollary~\ref{cor:deterministic} converts it to the standard
+deterministic-sequence guarantee.
+
+\begin{theorem}[Price of fidelity]\label{thm:main}
+Fix $K\geq2$. There are constants $c_K,C_K,\beta_K>0$ such that for every
+$T\geq1$ and $\beta\in(0,\beta_K)$, there is a deterministic hint sequence
+$q_{1:T}$ and a product distribution over $y_{1:T}$ with
+$\E[y_t\mid q_t]=q_t$ for which every nonanticipating randomized learner
+satisfying $\E\Reg_T\leq\beta$ obeys
+\[
+ \E\calone(p,y)
+ \geq c_K\min\!\left\{1,
+       \frac{1}{\sqrt{T\beta^{d/2}}}\right\}
+       -C_K\sqrt\beta.
+\]
+\end{theorem}
+
+The dimension in Theorem~\ref{thm:main} is intrinsic rather than ambient.
+The supplement proves the following structured form by projecting learner
+forecasts onto the convex hint box before rounding.
+
+\begin{proposition}[Intrinsic hint dimension]\label{prop:intrinsic}
+Fix $K\geq2$ and $1\leq r\leq K-1$. There is an $r$-dimensional affine box
+$Q_r\subset\operatorname{int}(\simplex)$ such that restricting all truthful
+hints to $Q_r$ changes the lower bound in Theorem~\ref{thm:main} to
+\[
+ \E\calone(p,y)
+ \geq c_{K,r}\min\left\{1,
+ \frac1{\sqrt{T\beta^{r/2}}}\right\}-C_{K,r}\sqrt\beta.
+\]
+\end{proposition}
+
+The constants may depend on fixed $K$. Appendix~A states the corresponding
+dependence for any loss that is strongly proper in Euclidean norm.
+
+\begin{corollary}[Minimax horizon]\label{cor:deterministic}
+For every fixed $K\geq2$ and all sufficiently small $\varepsilon$, any
+algorithm that is $(\varepsilon,\varepsilon^2)$-recalibrated for all
+deterministic oblivious sequences must have
+\[
+ T=\Omega_K(\varepsilon^{-(K+1)}).
+\]
+The conclusion holds with either $\calone$ or $\caltwo$ calibration.
+\end{corollary}
+
+\begin{proof}
+Average a claimed deterministic-sequence guarantee over the product
+distribution in Theorem~\ref{thm:main}. If both expected guarantees held, the
+theorem with $\beta=\varepsilon^2$ would imply
+\[
+ \varepsilon\geq
+ c_K\min\{1,(T\varepsilon^d)^{-1/2}\}-C_K\varepsilon.
+\]
+For small enough $\varepsilon$, this requires
+$T\geq c'_K\varepsilon^{-(d+2)}$. Since $d+2=K+1$, the claim follows. The
+inequality $\calone\leq\caltwo$ gives the RMS statement.
+\end{proof}
+
+For completeness, the known upper bound can be expressed in our notation.
+
+\begin{proposition}[Existing upper bound]\label{prop:upper}
+For fixed $K\geq3$, there is an algorithm such that for every
+$\eta\in(0,1)$ and every oblivious sequence,
+\begin{align*}
+ \E\Reg_T&=O_K(\eta^2),\\
+ \E\caltwo&=\widetilde O_K\!\left(
+ T^{-1/4}+\eta+\frac1{\sqrt{T\eta^d}}\right).
+\end{align*}
+Thus $(\varepsilon,\varepsilon^2)$-recalibration is attainable when
+$T=\widetilde O_K(\varepsilon^{-(K+1)})$. For $K=2$, the same horizon
+$\widetilde O(\varepsilon^{-3})$ follows from \citet{hu2026optimal}.
+\end{proposition}
+
+\begin{proof}
+Theorem 17 of \citet{chen2026calibeating}, with the reference algorithm set to
+$q_t$, gives expected cumulative regret $O(\eta^2T)$ and cumulative Brier
+calibration
+$\widetilde O_K(\sqrt T+\eta^{-d}+\eta^2T)$ with high probability. Integrating
+the tail and applying Jensen gives the display. Set $\eta=\varepsilon$. When
+$d\geq2$ and $T=\widetilde\Omega_K(\varepsilon^{-(d+2)})$, all three
+calibration terms are $\widetilde O_K(\varepsilon)$.
+\end{proof}
+
+Together, Corollary~\ref{cor:deterministic} and
+Proposition~\ref{prop:upper} establish the fixed-$K$ horizon up to logarithms.
+The sharper lower bound also matches the dimension-dependent term in the upper
+tradeoff after identifying $\eta=\sqrt\beta$.
+
+Define $\varepsilon_K^*(T)$ as the infimum over $\varepsilon$ for which some
+algorithm is $(\varepsilon,\varepsilon^2)$-recalibrated at horizon $T$.
+Equivalently, this is the smallest joint scale when calibration is measured in
+units of $\varepsilon$ and fidelity in units of $\varepsilon^2$.
+
+\begin{corollary}[Joint minimax rate]\label{cor:rate}
+For every fixed $K\geq2$,
+\[
+ \varepsilon_K^*(T)=\widetilde\Theta_K
+ \bigl(T^{-1/(K+1)}\bigr).
+\]
+The lower bound has no logarithmic loss.
+\end{corollary}
+
+\begin{proof}
+Invert the horizon bounds in Corollary~\ref{cor:deterministic} and
+Proposition~\ref{prop:upper}.
+\end{proof}
+
+\section{Truthful Lattice Instance}
+
+We now prove Theorem~\ref{thm:main}. Choose constants $0<a_K<b_K$ so that
+\[
+ Q=\{q(x)=(x_1,\ldots,x_d,1-\textstyle\sum_{j=1}^d x_j):
+ x\in[a_K,b_K]^d\}
+\]
+lies inside $\simplex$. We may take $a_K=1/(4K)$ and $b_K=1/(2K)$. In
+particular, $q_1(1-q_1)\geq\sigma_K^2>0$ throughout $Q$.
+
+Let $G_h$ be the image of the spacing-$h$ lattice in this box. Its size $M$
+satisfies $c_Kh^{-d}\leq M\leq C_Kh^{-d}$. Cycle deterministically through
+$G_h$. Each source point then occurs at most $L=\lceil T/M\rceil$ times. Draw
+labels independently as
+\[
+ y_t\mid q_t\sim\operatorname{Categorical}(q_t).
+\]
+Represent learner randomization by a seed $U$ sampled at time zero, independently
+of the labels, and set $\mathcal F_t=\sigma(U,y_1,\ldots,y_t)$. Then $p_t$ is
+$\mathcal F_{t-1}$-measurable and $\E[y_t\mid\mathcal F_{t-1}]=q_t$.
+Truthfulness gives the exact identity
+\[
+ \E[\ell(p_t,y_t)-\ell(q_t,y_t)\mid\mathcal F_{t-1}]
+ =\|p_t-q_t\|_2^2.
+\]
+Hence the fidelity premise implies
+\begin{equation}\label{eq:movement-p}
+ \E\sum_{t=1}^T\|p_t-q_t\|_2^2\leq\beta T.
+\end{equation}
+
+\section{Rounding and Fluctuation}
+
+We first reduce arbitrary forecasts to a finite net. Let
+$m=\lceil\sqrt K/h\rceil$ and
+\[
+ N_h=\{z/m:z\in\mathbb Z_+^K,\ \sum_i z_i=m\}.
+\]
+Largest-remainder rounding defines $R_h:\simplex\to N_h$ with
+$\|R_h(p)-p\|_2\leq h$ and $|N_h|\leq C_Kh^{-d}$. Put $r_t=R_h(p_t)$.
+
+\begin{lemma}[Rounding]\label{lem:rounding}
+Pathwise,
+$\calone(r,y)\leq\calone(p,y)+h$. Moreover,
+\[
+ \E B:=\E\sum_{t=1}^T\|r_t-q_t\|_2^2
+ \leq C_K(\beta+h^2)T.
+\]
+\end{lemma}
+
+\begin{proof}
+For each $v\in N_h$, group all exact values $p$ rounded to $v$. Then
+\begin{align*}
+ \left\|\sum_{t:r_t=v}(v-y_t)\right\|_2
+ &\leq\sum_{p:R_h(p)=v}
+ \left\|\sum_{t:p_t=p}(p-y_t)\right\|_2\\
+ &\quad+\sum_{t:r_t=v}\|v-p_t\|_2.
+\end{align*}
+Sum over $v$ and divide by $T$. The movement claim follows from
+$\|r_t-q_t\|_2^2\leq2\|p_t-q_t\|_2^2+2h^2$ and
+\eqref{eq:movement-p}.
+\end{proof}
+
+Set $h=c\sqrt\beta$ for a sufficiently small fixed $c$. Constants below absorb
+$c$. Lemma~\ref{lem:rounding} gives $\E B\leq C_Kh^2T$.
+For every $v\in N_h$, define
+\[
+ \nu_v=\sum_t\1\{r_t=v\},
+ \qquad
+ \mu_v=\sum_t\1\{r_t=v\}(q_{t,1}-y_{t,1}).
+\]
+
+\begin{lemma}[Bias and fluctuation]\label{lem:bias}
+\[
+ \E\calone(r,y)\geq
+ \frac1T\sum_v\E|\mu_v|-\sqrt{\E B/T}.
+\]
+\end{lemma}
+
+\begin{proof}
+The first coordinate of the unnormalized residual in bin $v$ equals
+\[
+ \mu_v+\sum_{t:r_t=v}(r_{t,1}-q_{t,1}).
+\]
+The Euclidean norm dominates its absolute value. The reverse triangle
+inequality leaves $\sum_v|\mu_v|$ minus the total absolute bias. Two
+Cauchy--Schwarz inequalities bound the latter pathwise by $\sqrt{TB}$. Take
+expectations and apply Jensen.
+\end{proof}
+
+\section{A Dimension-Matched Moment}
+
+Set
+\[
+ s=1+\frac2d,
+ \qquad a=\frac{2s-1}{2s-2},
+ \qquad b=\frac1{2s-2}.
+\]
+The identities
+\begin{equation}\label{eq:identities}
+ a-b=1,
+ \qquad a-sb=\frac12,
+ \qquad 2b=\frac d2
+\end{equation}
+will determine the final exponent.
+
+\begin{lemma}[Adaptive anti-concentration]\label{lem:anti}
+For the predictable bin choices above,
+\[
+ \sum_v\E|\mu_v|
+ \geq c_K\frac{T^a}{(\sum_v\E\nu_v^s)^b}.
+\]
+\end{lemma}
+
+\begin{proof}
+Fix $v$ and write
+$X_t=\1\{r_t=v\}(q_{t,1}-y_{t,1})$. These are bounded martingale differences.
+Orthogonality and the interior variance bound give
+\begin{equation}\label{eq:second}
+ \E\mu_v^2\geq\sigma_K^2\E\nu_v.
+\end{equation}
+Their predictable quadratic variation is at most $\nu_v$. The
+Burkholder--Rosenthal inequality at the real moment $2s\geq2$ gives
+\begin{align*}
+ \E|\mu_v|^{2s}
+ &\leq C_s\E\left[
+ \langle\mu_v\rangle_T^s+\max_t|X_t|^{2s}\right]\\
+ &\leq C_K\E\nu_v^s.
+\end{align*}
+The second term is absorbed because it is at most
+$\Pr(\nu_v>0)\leq\E\nu_v^s$. Interpolating $L_2$ between $L_1$ and $L_{2s}$,
+then using \eqref{eq:second}, yields
+\[
+ \E|\mu_v|\geq
+ c_K\frac{(\E\nu_v)^a}{(\E\nu_v^s)^b}.
+\]
+Omit bins with zero expected occupancy. Since $a-1=b$, H\"older's inequality
+gives
+\[
+ T=\sum_v\E\nu_v
+ \leq\left(\sum_v\frac{(\E\nu_v)^a}{(\E\nu_v^s)^b}\right)^{1/a}
+ \left(\sum_v\E\nu_v^s\right)^{b/a}.
+\]
+Rearranging proves the claim. The noninteger moment is valid in the
+Burkholder--Rosenthal theorem for every real exponent at least two
+\citep{burkholder1973distribution,collina2026optimal}.
+\end{proof}
+
+The use of $s=1+2/d$ is essential. A fourth-moment argument corresponds to
+$s=2$ and aligns directly with squared $d$-dimensional transport only when
+$d=2$. The binary proof of \citet{hu2026optimal} instead uses a separate
+one-dimensional charging argument.
+
+\section{Lattice Transport}
+
+For an output bin $v$, define its movement contribution
+$b_v=\sum_{t:r_t=v}\|q_t-v\|_2^2$.
+
+\begin{lemma}[Occupancy transport]\label{lem:transport}
+Pathwise, for every $v\in N_h$,
+\[
+ \nu_v^{1+2/d}
+ \leq C_K\left[
+ \1\{\nu_v>0\}L^{1+2/d}
+ +\frac{L^{2/d}b_v}{h^2}\right].
+\]
+\end{lemma}
+
+\begin{proof}
+Sort source occurrences assigned to $v$ by distance. A radius-$R$ Euclidean
+ball centered at any $v$, including a boundary point, contains at most
+$C_KL(1+R/h)^d$ occurrences of the spacing-$h$ source lattice. After the first
+$C_KL$ assignments, the $i$th distance is therefore at least
+$c_Kh(i/L)^{1/d}$. Summing the squared ordered distances and comparing with an
+integral gives
+\[
+ b_v\geq c_Kh^2L^{-2/d}
+ \bigl(\nu_v^{1+2/d}-C_KL^{1+2/d}\bigr).
+\]
+Rearrange.
+\end{proof}
+
+\begin{lemma}[Global occupancy moment]\label{lem:global}
+If $\E B\leq C_Kh^2T$, then
+\[
+ \sum_v\E\nu_v^s\leq
+ \begin{cases}
+ C_KT,&T<M,\\
+ C_KT^sh^2,&T\geq M.
+ \end{cases}
+\]
+\end{lemma}
+
+\begin{proof}
+Sum Lemma~\ref{lem:transport} over occupied output bins. If $T<M$, then $L=1$
+and there are at most $T$ such bins. The baseline is $O_K(T)$ and the expected
+transport term is at most $\E B/h^2=O_K(T)$.
+
+If $T\geq M$, then $L\leq C_KTh^d$ and at most
+$|N_h|\leq C_Kh^{-d}$ bins are occupied. The baseline is at most
+\[
+ C_Kh^{-d}(Th^d)^s=C_KT^sh^2,
+\]
+because $d(s-1)=2$. The expected transport term is at most
+\[
+ C_K(Th^d)^{2/d}\frac{\E B}{h^2}
+ \leq C_KT^{1+2/d}h^2=C_KT^sh^2.
+\]
+\end{proof}
+
+\section{Completing the Lower Bound}
+
+When $T<M$, Lemmas~\ref{lem:anti} and \ref{lem:global} give
+$\sum_v\E|\mu_v|\geq c_KT$. When $T\geq M$, they give
+\begin{align*}
+ \sum_v\E|\mu_v|
+ &\geq c_K\frac{T^a}{(T^sh^2)^b}\\
+ &=c_K\sqrt T\,h^{-d/2},
+\end{align*}
+where the last equality uses \eqref{eq:identities}. Lemmas~\ref{lem:rounding}
+and \ref{lem:bias} now imply
+\[
+ \E\calone(p,y)
+ \geq c_K\min\{1,(Th^d)^{-1/2}\}-C_Kh.
+\]
+Substituting $h=c\sqrt\beta$ proves Theorem~\ref{thm:main}.
+
+The proof is uniform over randomized learners. The seed construction makes
+every adaptive bin selection predictable. Finally, if an algorithm met both
+guarantees for every deterministic sequence, averaging over the product label
+distribution would preserve both guarantees. Therefore some deterministic
+realization must violate one of them, which justifies the oblivious minimax
+form in Corollary~\ref{cor:deterministic}.
+
+\section{Related Work and Discussion}
+
+Classical online calibration began with binary forecasting
+\citep{foster1998asymptotic}. Recalibration adds comparison to a supplied
+forecaster. \citet{kuleshov2017estimating} introduced this online objective,
+and \citet{okoroafor2024faster} used approachability to improve its binary
+calibration--regret tradeoff. \citet{hu2026optimal} obtained the sharp binary
+$(\varepsilon,\varepsilon^2)$ law and its lower bound. Our construction starts
+from the same truthful-hint principle, but the proof must control adaptive
+merging over a full simplex. The fractional moment and lattice transport
+lemmas provide that step.
+
+Calibeating compares against the refinement of external forecasts rather than
+their realized loss \citep{foster2023calibeating}. Recent work reduces it to
+online regret minimization and extends it across proper losses
+\citep{chen2026calibeating,foster2026proper,fichtl2026bregman}. Theorem 17 of
+\citet{chen2026calibeating} is particularly relevant because its meta-algorithm
+also tracks the realized loss of an arbitrary reference predictor. It supplies
+the matching multiclass upper bound in Proposition~\ref{prop:upper}. Their work
+does not give a fidelity-constrained multiclass lower bound.
+
+\citet{fishelson2025full} develop the full-swap and triangulation machinery
+behind dimension-dependent calibration upper bounds. Their lossless rounding
+analysis is one-dimensional, and they leave its extension to higher dimensions
+open for general convex losses. Our result is a lower bound rather than a
+rounding algorithm. It shows that the simplex discretization exponent in the
+Brier fidelity tradeoff cannot be removed.
+
+High-dimensional calibration has recently taken a different route.
+\citet{peng2025highdim} and \citet{fishelson2025highdim} obtain calibration-only
+algorithms with polynomial dependence on the number of classes for fixed
+accuracy, together with lower bounds when dimension grows with accuracy. These
+results use no external-hint fidelity constraint and address a different
+asymptotic regime. U-calibration achieves $\Theta(\sqrt{KT})$ regret uniformly
+over bounded proper losses without requiring canonical calibration
+\citep{luo2024optimal}. Computational multiclass work similarly studies weaker
+projected or smooth criteria \citep{gopalan2024computational}. None implies the
+fixed-$K$, sharp-in-$\varepsilon$ law proved here.
+
+Our theorem leaves two natural directions. First, the constants are not
+optimized in $K$, so the result should not be read as a sharp high-dimensional
+bound. Proposition~\ref{prop:intrinsic} suggests adapting upper bounds to the
+intrinsic dimension of structured hint sequences. Second, the upper and lower
+Pareto bounds match in their geometric term, but the upper contains an
+additional $T^{-1/4}$ pure-sampling term. Determining the complete
+two-parameter frontier away from
+$\beta=\Theta(\varepsilon^2)$ remains open.
+
+\section{Conclusion}
+
+Preserving a truthful multiclass forecaster has an unavoidable geometric cost.
+To reduce the number of exact forecast bins, a recalibrator must transport a
+$d$-dimensional lattice of hints, and strong propriety charges squared distance
+for that transport. Adaptive martingale fluctuation then forces calibration
+error of order $(T\beta^{d/2})^{-1/2}$ before the movement bias is paid. At
+$\beta=\varepsilon^2$, this gives the minimax horizon
+$\widetilde\Theta_K(\varepsilon^{-(K+1)})$. The exponent is therefore the price
+of fidelity, not merely a feature of known simplex discretizations.
+
+\balance
+\bibliography{references}
+
+\appendix
+\newpage
+\section{Pointers to the Supplement}
+The supplement gives expanded proofs, the strongly proper loss extension, and
+the precise conversion of the existing cumulative-calibration upper bound.
+
+\end{document}

@@ -1,0 +1,333 @@
+\documentclass[twoside]{article}
+
+\usepackage[preprint]{aistats2027}
+\usepackage[round,authoryear]{natbib}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{mathtools}
+\usepackage{microtype}
+\usepackage{url}
+
+\renewcommand{\bibname}{References}
+\renewcommand{\bibsection}{\subsubsection*{\bibname}}
+\bibliographystyle{apalike}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+\newtheorem{corollary}{Corollary}
+\newcommand{\E}{\mathbb E}
+\newcommand{\calone}{\operatorname{Cal}_1}
+\newcommand{\caltwo}{\operatorname{Cal}_2}
+\newcommand{\Reg}{\operatorname{Reg}}
+\newcommand{\simplex}{\Delta_K}
+\newcommand{\1}{\mathbf 1}
+
+\begin{document}
+\runningauthor{}
+\onecolumn
+
+\aistatstitle{Supplement: The Price of Fidelity in Multiclass Online Recalibration}
+
+\section{Explicit Simplex Net}
+
+Fix $h\in(0,1)$ and put $m=\lceil\sqrt K/h\rceil$. Define
+\[
+ N_h=\left\{z/m:z\in\mathbb Z_+^K,\ \sum_{i=1}^Kz_i=m\right\}.
+\]
+For $p\in\simplex$, first set $z_i=\lfloor mp_i\rfloor$. The deficit
+$m-\sum_i z_i$ is an integer between zero and $K-1$. Add one to that many
+coordinates with largest fractional parts. The resulting vector still sums to
+$m$, and every coordinate differs from $mp_i$ by less than one. Thus the map
+$R_h(p)=z/m$ satisfies
+\[
+ \|R_h(p)-p\|_2<\frac{\sqrt K}{m}\leq h.
+\]
+Stars and bars gives
+\[
+ |N_h|={m+K-1\choose K-1}\leq C_Km^{K-1}\leq C_Kh^{-(K-1)}.
+\]
+This proves all net properties used in Lemma 1 of the main paper.
+
+\section{Strongly Proper Losses}
+
+A multiclass loss $\ell$ is $\lambda$-strongly proper in Euclidean norm if
+for every $p,q\in\simplex$,
+\[
+ \E_{Y\sim q}[\ell(p,Y)-\ell(q,Y)]
+ \geq\lambda\|p-q\|_2^2.
+\]
+The Brier loss in the main paper has equality with $\lambda=1$.
+
+\begin{theorem}[Strongly proper extension]\label{thm:strong}
+Fix $K\geq2$ and $\lambda>0$. There are constants
+$c_{K,\lambda},C_{K,\lambda},\beta_{K,\lambda}>0$ such that, on the truthful
+product instance from the main paper, every learner with
+\[
+ \E\left[\frac1T\sum_{t=1}^T
+ \bigl(\ell(p_t,y_t)-\ell(q_t,y_t)\bigr)\right]\leq\beta
+\]
+for a $\lambda$-strongly proper loss obeys
+\[
+ \E\calone(p,y)\geq
+ c_{K,\lambda}\min\left\{1,
+ (T\beta^{(K-1)/2})^{-1/2}\right\}
+ -C_{K,\lambda}\sqrt\beta.
+\]
+\end{theorem}
+
+\begin{proof}
+Conditional strong propriety and truthfulness give
+\[
+ \E\sum_{t=1}^T\|p_t-q_t\|_2^2\leq\frac{\beta T}{\lambda}.
+\]
+Choose $h=c\sqrt{\beta/\lambda}$. The rounding argument then gives
+$\E B\leq C_Kh^2T$. Every remaining lemma depends only on this movement
+bound, the source lattice, and the interior label variance. Therefore the proof
+in the main paper gives
+\[
+ \E\calone(p,y)\geq
+ c_K\min\{1,(Th^{K-1})^{-1/2}\}-C_Kh.
+\]
+Substitution absorbs powers of $\lambda$ into the displayed constants.
+\end{proof}
+
+The theorem requires only a lower curvature bound. It does not require
+smoothness, mixability, or bounded loss values beyond integrability of the
+stated expected excess loss.
+
+\section{Intrinsic Hint Dimension}
+
+We prove Proposition 1 of the main paper. Fix $1\leq r\leq K-1$. Choose an
+$r$-dimensional affine box $Q_r$ inside the simplex by varying the first $r$
+coordinates in a sufficiently small positive interval, holding coordinates
+$r+1$ through $K-1$ at positive constants, and using the last coordinate as
+the remainder. A spacing-$h$ grid in $Q_r$ has
+$M=\Theta_{K,r}(h^{-r})$ points and the same interior variance bound used in
+the main proof.
+
+Let $P_{Q_r}$ be Euclidean projection onto the closed convex box $Q_r$, which
+has an $h$-net $N_{h,r}$ of size at most $C_{K,r}h^{-r}$. Define $r_t$ by
+projecting $p_t$ and rounding the projection to this net. Since every $q_t$
+lies in $Q_r$, the projection inequality gives
+\[
+ \|P_{Q_r}(p_t)-q_t\|_2\leq\|p_t-q_t\|_2
+\]
+and
+\[
+ \operatorname{dist}(p_t,Q_r)\leq\|p_t-q_t\|_2.
+\]
+The grouping argument from the main rounding lemma now gives
+\[
+ \calone(r,y)\leq\calone(p,y)
+ +\frac1T\sum_{t=1}^T\operatorname{dist}(p_t,Q_r)+h.
+\]
+Under expected fidelity at most $\beta$, Jensen and Cauchy--Schwarz bound the
+expected projection term by $\sqrt\beta$. The rounded movement still obeys
+\[
+ \E\sum_{t=1}^T\|r_t-q_t\|_2^2\leq C_{K,r}(\beta+h^2)T.
+\]
+
+All rounded bins now lie in the $r$-dimensional affine space. Repeat the
+martingale proof with
+\[
+ s=1+\frac2r,
+ \qquad
+ a=\frac{2s-1}{2s-2},
+ \qquad
+ b=\frac1{2s-2}.
+\]
+The source ball count and occupancy transport argument use dimension $r$.
+The net cardinality is $O_{K,r}(h^{-r})$. Thus the global occupancy moment is
+$O_{K,r}(T^sh^2)$ in the long-horizon regime, and the same exponent
+cancellation gives
+\[
+ \E\calone(r,y)
+ \geq c_{K,r}\min\{1,(Th^r)^{-1/2}\}-C_{K,r}h.
+\]
+Returning from $r_t$ to $p_t$ costs at most $\sqrt\beta+h$ in expectation.
+Setting $h=c\sqrt\beta$ proves Proposition 1.
+
+\section{Fractional Martingale Moment}
+
+We expand the interpolation step in Lemma 3 of the main paper. Fix an output
+bin $v$ and let $Z=\mu_v$. Put
+\[
+ s=1+\frac2d,
+ \qquad
+ \theta=\frac{s-1}{2s-1}.
+\]
+The interpolation identity
+\[
+ \frac12=\frac{\theta}{1}+\frac{1-\theta}{2s}
+\]
+and log-convexity of $L_p$ norms give
+\[
+ \|Z\|_2\leq\|Z\|_1^\theta\|Z\|_{2s}^{1-\theta}.
+\]
+Rearranging and raising to the required powers yields
+\[
+ \E|Z|
+ \geq
+ \frac{(\E Z^2)^a}{(\E|Z|^{2s})^b},
+ \qquad
+ a=\frac{2s-1}{2s-2},
+ \qquad
+ b=\frac1{2s-2}.
+\]
+The interior variance and Burkholder--Rosenthal bounds therefore imply
+\[
+ \E|\mu_v|
+ \geq c_K\frac{(\E\nu_v)^a}{(\E\nu_v^s)^b}.
+\]
+
+For completeness, the Burkholder--Rosenthal inequality used here states that
+for a discrete martingale $M_t$ with differences $D_t$ and every real
+$p\geq2$,
+\[
+ \E\max_{t\leq T}|M_t|^p
+ \leq C_p\left(
+ \E\langle M\rangle_T^{p/2}
+ +\E\max_{t\leq T}|D_t|^p\right).
+\]
+This is the form quoted by \citet[Lemma 1]{collina2026optimal}, who attribute
+it to \citet{burkholder1973distribution}. In our application,
+$D_t=\1\{r_t=v\}(q_{t,1}-y_{t,1})$. Predictability gives
+\[
+ \langle M\rangle_T
+ =\sum_t\1\{r_t=v\}q_{t,1}(1-q_{t,1})\leq\nu_v.
+\]
+Also,
+$\max_t|D_t|^{2s}\leq\1\{\nu_v>0\}\leq\nu_v^s$. Hence
+$\E|\mu_v|^{2s}\leq C_K\E\nu_v^s$ for the noninteger value
+$2s=2+4/d$.
+
+To combine bins, define
+\[
+ A_v=\E\nu_v,
+ \qquad B_v=\E\nu_v^s,
+ \qquad X_v=A_v^a/B_v^b.
+\]
+Since $a-1=b$, H\"older with conjugate exponents $a$ and $a/(a-1)$ gives
+\[
+ \sum_v A_v
+ =\sum_vX_v^{1/a}B_v^{b/a}
+ \leq\left(\sum_vX_v\right)^{1/a}
+ \left(\sum_vB_v\right)^{b/a}.
+\]
+As $\sum_vA_v=T$, rearrangement gives
+\[
+ \sum_v\E|\mu_v|
+ \geq c_K\frac{T^a}{(\sum_v\E\nu_v^s)^b}.
+\]
+
+\section{Detailed Lattice Transport Proof}
+
+Let the source chart be
+$q(x)=(x_1,\ldots,x_d,1-\sum_jx_j)$. For any $x,x'\in\mathbb R^d$,
+\[
+ \|q(x)-q(x')\|_2^2
+ =\|x-x'\|_2^2+\left(\sum_j(x_j-x'_j)\right)^2
+ \geq\|x-x'\|_2^2.
+\]
+Therefore a Euclidean ball of radius $R$ in the simplex intersects no more
+source points than a radius-$R$ ball intersects in the spacing-$h$ Cartesian
+lattice. A coordinate cube cover gives at most
+$C_K(1+R/h)^d$ distinct points. Since each source point occurs at most $L$
+times, the occurrence count is at most
+\begin{equation}\label{eq:ballcount}
+ C_KL(1+R/h)^d.
+\end{equation}
+
+Fix an output $v$ and sort the distances of assigned source occurrences as
+$D_1\leq\cdots\leq D_{\nu_v}$. The center $v$ need not lie on the lattice and
+may lie on the simplex boundary. Equation~\eqref{eq:ballcount} still applies.
+There are constants $c_K,C_K$ such that for every $i>C_KL$,
+\[
+ D_i\geq c_Kh(i/L)^{1/d}.
+\]
+Consequently,
+\begin{align*}
+ b_v=\sum_{i=1}^{\nu_v}D_i^2
+ &\geq c_Kh^2L^{-2/d}
+ \sum_{i=C_KL+1}^{\nu_v}i^{2/d}\\
+ &\geq c_Kh^2L^{-2/d}
+ \left(\nu_v^{1+2/d}-C_KL^{1+2/d}\right).
+\end{align*}
+Moving the baseline term to the other side proves the occupancy transport
+inequality. The proof uses only an upper bound on source multiplicity, so it
+also covers a horizon that stops partway through the final lattice cycle.
+
+Summing the transport inequality gives
+\[
+ \sum_v\nu_v^s
+ \leq C_K\left(
+ N_{\mathrm{occ}}L^s+L^{2/d}B/h^2\right),
+\]
+where $N_{\mathrm{occ}}$ is the number of occupied output bins. If $T<M$, then
+$L=1$ and $N_{\mathrm{occ}}\leq T$. If $T\geq M$, then
+$L\leq C_KTh^d$ and $N_{\mathrm{occ}}\leq|N_h|\leq C_Kh^{-d}$. These two cases
+give the global occupancy lemma after taking expectations.
+
+\section{Expected Upper-Bound Conversion}
+
+We detail Proposition 2 of the main paper. Theorem 17 of
+\citet{chen2026calibeating} gives a pure-forecast algorithm with expected
+cumulative Brier regret $O(\eta^2T)$ relative to any reference algorithm. It
+also gives, with probability at least $1-\delta$,
+\[
+ K_T\leq\widetilde O_K\left(
+ \sqrt T+\eta^{-d}+\eta^2T+\log(1/\delta)
+ \right),
+\]
+where $K_T=T\caltwo^2$ and the notation hides fixed-$K$ and logarithmic
+factors. Choose the reference algorithm that outputs the revealed hint $q_t$.
+Choosing $\delta=T^{-2}$ and using the deterministic bound $K_T\leq2T$ on the
+failure event gives
+\[
+ \E K_T\leq\widetilde O_K(\sqrt T+\eta^{-d}+\eta^2T).
+\]
+Jensen and $\sqrt{x+y+z}\leq\sqrt x+\sqrt y+\sqrt z$ yield
+\[
+ \E\caltwo
+ \leq\sqrt{\E K_T/T}
+ \leq\widetilde O_K\left(
+ T^{-1/4}+\frac1{\sqrt{T\eta^d}}+\eta\right).
+\]
+For $d\geq2$, set $\eta=\varepsilon$ and
+$T=\widetilde\Omega_K(\varepsilon^{-(d+2)})$. Then
+\[
+ T^{-1/4}\leq\widetilde O_K(\varepsilon^{(d+2)/4})
+ \leq\widetilde O_K(\varepsilon),
+\]
+and the other two terms are also $\widetilde O_K(\varepsilon)$. This explains
+why the multiclass upper theorem covers $K\geq3$. The binary case uses the
+sharper direct construction of \citet{hu2026optimal}.
+
+\section{Deterministic Adversarial Realization}
+
+The lower construction randomizes labels, while the online guarantee in the
+main paper quantifies over deterministic sequences and averages only over the
+learner seed. Suppose an algorithm met both target guarantees for every
+deterministic label realization under the fixed hint sequence. Averaging each
+guarantee over the independent categorical labels would preserve both
+inequalities. The price-of-fidelity theorem rules this out below the stated
+horizon. Therefore at least one deterministic label realization violates at
+least one target guarantee. This is the standard averaging form of the
+probabilistic method and requires no adaptive adversary.
+
+\section{Calibration Norms}
+
+For weights $w_v=n_v/T$ that sum to one, Cauchy--Schwarz gives
+\[
+ \calone
+ =\sum_vw_v\|v-\rho_v\|_2
+ \leq\left(\sum_vw_v\|v-\rho_v\|_2^2\right)^{1/2}
+ =\caltwo.
+\]
+Thus every lower bound on expected $\calone$ applies directly to expected
+$\caltwo$. In the binary case, identifying a scalar probability $p$ with
+$(p,1-p)$ changes both norms by only a factor $\sqrt2$. No rate exponent is
+affected.
+
+\bibliography{references}
+
+\end{document}
